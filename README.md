@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tash Lashes & Eyebrows
 
-## Getting Started
+Mobile-first, bilingual booking web app for a beauty business built with Next.js 14.
 
-First, run the development server:
+## Stack
+
+- Next.js 14 (App Router)
+- Tailwind CSS + Framer Motion
+- `next-intl` for Hebrew (default, RTL) and English (LTR)
+- `lucide-react` icons
+- Resend email notifications
+- Prisma + PostgreSQL persistence
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local` and fill values:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `RESEND_API_KEY`: your API key from Resend dashboard
+- `NOTIFICATION_EMAIL`: Natasha's receiving email
+- `ADMIN_PHONE_NUMBER`: used to build WhatsApp quick-chat link (`972...` format)
+- `ADMIN_PASSWORD`: admin login password
+- `ADMIN_SESSION_SECRET`: random secret for secure cookie signing
+- `DATABASE_URL`: PostgreSQL connection string (recommended for Vercel/Supabase/Neon)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Run Locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run db:generate
+npm run db:migrate
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000). App redirects to `/he`.
 
-To learn more about Next.js, take a look at the following resources:
+## Main Flows
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Client booking flow (4 steps): service/time -> details -> health declaration -> submit
+- Slot becomes `pending` immediately after booking submission
+- Notification email is sent with booking details + health summary + WhatsApp link
+- Booking and slot state are stored in PostgreSQL for persistence
+- Admin:
+  - Login
+  - Open slots by service type
+  - View pending requests
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+Deploy on [Vercel](https://vercel.com/new). Add the same environment variables in project settings.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+For production DB migrations, run:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run db:deploy
+```

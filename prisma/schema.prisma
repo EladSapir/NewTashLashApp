@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum SlotStatus {
+  available
+  pending
+  confirmed
+}
+
+enum BookingStatus {
+  pending
+}
+
+model Slot {
+  id        String     @id @default(cuid())
+  startsAt  DateTime
+  status    SlotStatus @default(available)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  booking   Booking?
+
+  @@index([status, startsAt])
+}
+
+model Booking {
+  id               String        @id @default(cuid())
+  slotId           String        @unique
+  fullName         String
+  phoneNumber      String
+  age              Int
+  idNumber         String
+  policiesAccepted Boolean
+  serviceId        String
+  startsAt         DateTime
+  healthItems      String[]
+  status           BookingStatus @default(pending)
+  createdAt        DateTime      @default(now())
+
+  slot Slot @relation(fields: [slotId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt])
+}
