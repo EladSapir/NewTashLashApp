@@ -7,6 +7,18 @@ export const size = {
 
 export const contentType = "image/png";
 
+// Satori (the engine behind next/og) does not perform bidi reordering,
+// so Hebrew text is rendered in logical order (appears reversed visually).
+// We manually reverse each word and the word order so that when the text
+// is drawn left-to-right the reader sees it correctly right-to-left.
+function reverseHebrew(text: string): string {
+  return text
+    .split(" ")
+    .map((word) => word.split("").reverse().join(""))
+    .reverse()
+    .join(" ");
+}
+
 export default function OpenGraphImage() {
   return new ImageResponse(
     (
@@ -59,19 +71,8 @@ export default function OpenGraphImage() {
             <div style={{ fontSize: 68, fontWeight: 700, color: "#7e3e48" }}>
               Tash Lashes
             </div>
-            <div
-              lang="he"
-              dir="rtl"
-              style={{
-                fontSize: 42,
-                color: "#3a2d34",
-                direction: "rtl",
-                unicodeBidi: "bidi-override",
-                textAlign: "right",
-                display: "flex",
-              }}
-            >
-              {"\u202Bקביעת תורים\u202C"}
+            <div style={{ fontSize: 42, color: "#3a2d34" }}>
+              {reverseHebrew("קביעת תורים")}
             </div>
           </div>
         </div>

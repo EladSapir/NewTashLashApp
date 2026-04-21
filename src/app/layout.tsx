@@ -12,14 +12,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Tash Lashes - קביעת תורים",
     description: "Tash Lashes - קביעת תורים",
-    images: ["/opengraph-image?v=3"],
+    images: ["/opengraph-image?v=4"],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Tash Lashes - קביעת תורים",
     description: "Tash Lashes - קביעת תורים",
-    images: ["/opengraph-image?v=3"],
+    images: ["/opengraph-image?v=4"],
   },
 };
 
