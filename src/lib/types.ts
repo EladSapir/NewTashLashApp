@@ -13,13 +13,7 @@ export type Slot = {
   status: SlotStatus;
 };
 
-export type HealthItemId =
-  | "pregnant"
-  | "skinCondition"
-  | "allergy"
-  | "eyeInfection"
-  | "medication"
-  | "none";
+export type HealthItemId = string;
 
 export type BookingRequest = {
   id: string;
@@ -34,4 +28,9 @@ export type BookingRequest = {
   healthItems: HealthItemId[];
   status: "pending";
   createdAt: string;
+};
+
+export type BookingSubmissionMeta = {
+  healthDetails?: Record<string, string>;
+  signatureDataUrl?: string;
 };

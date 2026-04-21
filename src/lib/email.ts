@@ -1,15 +1,6 @@
 import { Resend } from "resend";
-import { BookingRequest } from "./types";
-import { SERVICES } from "./constants";
-
-const healthLabels: Record<string, string> = {
-  pregnant: "בהריון או בהנקה",
-  skinCondition: "מצב עור פעיל באזור העיניים/הגבות",
-  allergy: "אלרגיה ידועה לחומרים קוסמטיים",
-  eyeInfection: "גירוי או דלקת עיניים לאחרונה",
-  medication: "שימוש בתרופות המשפיעות על רגישות העור",
-  none: "ללא",
-};
+import { BookingRequest, BookingSubmissionMeta } from "./types";
+import { SERVICE_HEALTH_FORMS, SERVICES } from "./constants";
 
 const serviceLabels: Record<string, string> = {
   lashLift: "הרמת ריסים",
@@ -20,7 +11,27 @@ const serviceLabels: Record<string, string> = {
   lashLiftBrowShape: "הרמת ריסים + עיצוב גבות",
 };
 
-export async function sendBookingEmail(booking: BookingRequest) {
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function buildList(items: string[]) {
+  if (items.length === 0) {
+    return "<p style='margin:0;color:#7a5a66'>לא סומן</p>";
+  }
+
+  return `<ul style="margin:0;padding-right:18px;">${items.map((item) => `<li style="margin-bottom:6px;">${item}</li>`).join("")}</ul>`;
+}
+
+export async function sendBookingEmail(
+  booking: BookingRequest,
+  meta?: BookingSubmissionMeta,
+) {
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.NOTIFICATION_EMAIL;
 
@@ -35,9 +46,23 @@ export async function sendBookingEmail(booking: BookingRequest) {
   const adminPhone = process.env.ADMIN_PHONE_NUMBER ?? "";
   const whatsappLink = `https://wa.me/${adminPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi Natasha, I'd like to confirm my appointment request.\nName: ${booking.fullName}\nPhone: ${booking.phoneNumber}`)}`;
 
-  const healthSummary = booking.healthItems
-    .map((item) => healthLabels[item] ?? item)
-    .join(" | ");
+  const form = SERVICE_HEALTH_FORMS[booking.serviceId as keyof typeof SERVICE_HEALTH_FORMS];
+  const medicalMap = new Map((form?.medicalOptions ?? []).map((item) => [item.id, item]));
+  const consentMap = new Map((form?.consentOptions ?? []).map((item) => [item.id, item]));
+
+  const medicalItems = booking.healthItems
+    .filter((id) => medicalMap.has(id))
+    .map((id) => {
+      const option = medicalMap.get(id)!;
+      const details = meta?.healthDetails?.[id]?.trim();
+      return details
+        ? `${escapeHtml(option.label)}<br/><span style="color:#7a5a66;">פירוט: ${escapeHtml(details)}</span>`
+        : escapeHtml(option.label);
+    });
+
+  const consentItems = booking.healthItems
+    .filter((id) => consentMap.has(id))
+    .map((id) => `אושר: ${escapeHtml(consentMap.get(id)!.label)}`);
 
   const formattedDate = new Date(booking.startsAt).toLocaleString("he-IL");
 
@@ -64,9 +89,19 @@ export async function sendBookingEmail(booking: BookingRequest) {
             <p><strong>משך טיפול:</strong> ${service.durationMinutes} דקות</p>
             <p><strong>תאריך ושעה:</strong> ${formattedDate}</p>
             <hr style="border:none;border-top:1px solid #f1e1e8;margin:16px 0;" />
-            <h3 style="margin:0 0 10px 0;">הצהרת בריאות</h3>
-            <p>${healthSummary}</p>
+            <h3 style="margin:0 0 10px 0;">שאלון רפואי</h3>
+            ${buildList(medicalItems)}
+            <hr style="border:none;border-top:1px solid #f1e1e8;margin:16px 0;" />
+            <h3 style="margin:0 0 10px 0;">הצהרה ואישור טיפול</h3>
+            ${buildList(consentItems)}
             <p><strong>אישור נהלים:</strong> אושר</p>
+            ${
+              meta?.signatureDataUrl
+                ? `<hr style="border:none;border-top:1px solid #f1e1e8;margin:16px 0;" />
+                   <h3 style="margin:0 0 10px 0;">חתימת לקוחה</h3>
+                   <img src="${meta.signatureDataUrl}" alt="חתימת לקוחה" style="display:block;max-width:100%;height:auto;border:1px solid #f0d4df;border-radius:12px;background:#fff;" />`
+                : ""
+            }
             <div style="margin-top:20px;">
               <a href="${whatsappLink}" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:700;">פתיחת וואטסאפ לאישור תור</a>
             </div>

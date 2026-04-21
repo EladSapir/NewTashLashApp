@@ -1,14 +1,30 @@
 import { HealthItemId } from "./types";
+import { HEALTH_NONE_ID, ServiceHealthForm } from "./constants";
 
 export function isValidPhoneNumber(phoneNumber: string) {
   const normalized = phoneNumber.replace(/[^\d+]/g, "");
   return /^(\+?\d{9,15})$/.test(normalized);
 }
 
-export function isValidHealthSelection(items: HealthItemId[]) {
-  if (items.length === 0) return false;
-  if (items.includes("none")) return items.length === 1;
-  return items.length >= 1;
+export function isValidHealthSelection(
+  items: HealthItemId[],
+  form?: ServiceHealthForm,
+) {
+  if (!form) return false;
+
+  const medicalIds = new Set(form.medicalOptions.map((item) => item.id));
+  const consentIds = new Set(form.consentOptions.map((item) => item.id));
+  const selectedMedical = items.filter((item) => medicalIds.has(item));
+
+  if (selectedMedical.length === 0) return false;
+  if (
+    selectedMedical.includes(HEALTH_NONE_ID) &&
+    selectedMedical.length > 1
+  ) {
+    return false;
+  }
+
+  return form.consentOptions.every((item) => consentIds.has(item.id) && items.includes(item.id));
 }
 
 export function isValidAge(value: number) {

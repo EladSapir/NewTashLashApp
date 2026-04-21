@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Clock3, MessageCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3, MessageCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
-  HEALTH_DECLARATION_ITEMS,
+  HEALTH_NONE_ID,
+  SERVICE_HEALTH_FORMS,
   SERVICES,
   SERVICE_IDS,
   SLOT_INTERVAL_MINUTES,
@@ -97,6 +98,8 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
   const [age, setAge] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [healthItems, setHealthItems] = useState<HealthItemId[]>([]);
+  const [healthDetails, setHealthDetails] = useState<Record<string, string>>({});
+  const [signatureDataUrl, setSignatureDataUrl] = useState("");
   const [policiesAccepted, setPoliciesAccepted] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
     "idle",
@@ -109,11 +112,59 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
    * carried over from a previous session / step change.
    */
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [signatureError, setSignatureError] = useState("");
+  const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+  const signatureHasStrokeRef = useRef(false);
+
+  const selectedServiceForm = serviceId ? SERVICE_HEALTH_FORMS[serviceId] : undefined;
+  const medicalOptionIds = useMemo(
+    () => new Set(selectedServiceForm?.medicalOptions.map((item) => item.id) ?? []),
+    [selectedServiceForm],
+  );
+  const consentOptionIds = useMemo(
+    () => new Set(selectedServiceForm?.consentOptions.map((item) => item.id) ?? []),
+    [selectedServiceForm],
+  );
 
   // Clear any lingering step-level error whenever we navigate between steps.
   useEffect(() => {
     setStepError("");
     setSubmitAttempted(false);
+    setSignatureError("");
+  }, [step]);
+
+  useEffect(() => {
+    setHealthItems([]);
+    setHealthDetails({});
+  }, [serviceId]);
+
+  useEffect(() => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    const resizeCanvas = () => {
+      const ratio = window.devicePixelRatio || 1;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const context = canvas.getContext("2d");
+      if (!context || width === 0 || height === 0) return;
+
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      canvas.width = Math.floor(width * ratio);
+      canvas.height = Math.floor(height * ratio);
+      context.scale(ratio, ratio);
+      context.lineWidth = 2;
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.strokeStyle = "#3a2d34";
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, width, height);
+    };
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    return () => window.removeEventListener("resize", resizeCanvas);
   }, [step]);
 
   const availableDates = useMemo(() => {
@@ -145,6 +196,68 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
   }, [serviceId, slotsOnDay, runLengths, requiredUnits]);
 
   const selectedSlot = slots.find((slot) => slot.id === slotId);
+
+  const getCanvasPoint = (
+    event: PointerEvent<HTMLCanvasElement>,
+    canvas: HTMLCanvasElement,
+  ) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+  };
+
+  const startSignature = (event: PointerEvent<HTMLCanvasElement>) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    drawingRef.current = true;
+    signatureHasStrokeRef.current = true;
+    setSignatureError("");
+    canvas.setPointerCapture(event.pointerId);
+    const { x, y } = getCanvasPoint(event, canvas);
+    context.beginPath();
+    context.moveTo(x, y);
+  };
+
+  const drawSignature = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (!drawingRef.current) return;
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    const { x, y } = getCanvasPoint(event, canvas);
+    context.lineTo(x, y);
+    context.stroke();
+  };
+
+  const finishSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    const context = canvas?.getContext("2d");
+    drawingRef.current = false;
+    context?.closePath();
+
+    if (canvas && signatureHasStrokeRef.current) {
+      setSignatureDataUrl(canvas.toDataURL("image/png"));
+      setSignatureError("");
+    }
+  };
+
+  const clearSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    signatureHasStrokeRef.current = false;
+    setSignatureDataUrl("");
+    setSignatureError("");
+  };
 
   const goBack = () => {
     if (step === 1) {
@@ -188,7 +301,7 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
         return;
       }
     }
-    if (step === 3 && !isValidHealthSelection(healthItems)) {
+    if (step === 3 && !isValidHealthSelection(healthItems, selectedServiceForm)) {
       setStepError(t("healthValidation"));
       return;
     }
@@ -221,9 +334,14 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
       setStepError(t("idInvalid"));
       return;
     }
-    if (!isValidHealthSelection(healthItems)) {
+    if (!isValidHealthSelection(healthItems, selectedServiceForm)) {
       setStep(3);
       setStepError(t("healthValidation"));
+      return;
+    }
+    if (!signatureDataUrl) {
+      setStep(4);
+      setSignatureError(t("signatureRequired"));
       return;
     }
     if (!policiesAccepted) {
@@ -247,6 +365,8 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
         serviceId,
         startsAt: selectedSlot.startsAt,
         healthItems,
+        healthDetails,
+        signatureDataUrl,
       }),
     });
 
@@ -264,6 +384,7 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
   return (
     <form
       onSubmit={submit}
+      dir="rtl"
       className="space-y-5 rounded-card border border-mauve/15 bg-white/90 p-5 shadow-soft backdrop-blur"
     >
       <div>
@@ -443,35 +564,94 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
 
           {step === 3 && (
             <div className="space-y-2">
-              <p className="font-semibold">{t("step3")}</p>
-              {HEALTH_DECLARATION_ITEMS.map((item) => (
+              <p className="font-semibold">{selectedServiceForm?.title ?? t("step3")}</p>
+              <p className="text-sm text-ink/70">{selectedServiceForm?.intro}</p>
+              <p className="text-sm font-medium text-ink/80">{t("medicalSection")}</p>
+              {selectedServiceForm?.medicalOptions.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-mauve/25 bg-white p-3 text-sm transition hover:border-mauve"
+                >
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={healthItems.includes(item.id)}
+                      className="accent-burgundy"
+                      onChange={(event) => {
+                        setHealthItems((prev) => {
+                          const nonMedical = prev.filter((value) => !medicalOptionIds.has(value));
+                          const currentMedical = prev.filter((value) => medicalOptionIds.has(value));
+
+                          let nextMedical: string[];
+                          if (event.target.checked) {
+                            if (item.id === HEALTH_NONE_ID) {
+                              nextMedical = [HEALTH_NONE_ID];
+                            } else {
+                              nextMedical = [
+                                ...currentMedical.filter((value) => value !== HEALTH_NONE_ID),
+                                item.id,
+                              ];
+                            }
+                          } else {
+                            nextMedical = currentMedical.filter((value) => value !== item.id);
+                          }
+
+                          return [...nonMedical, ...nextMedical];
+                        });
+
+                        if (!event.target.checked) {
+                          setHealthDetails((prev) => {
+                            const nextDetails = { ...prev };
+                            delete nextDetails[item.id];
+                            return nextDetails;
+                          });
+                        }
+                        if (stepError) setStepError("");
+                      }}
+                    />
+                    {item.label}
+                  </label>
+                  {item.allowDetails && healthItems.includes(item.id) ? (
+                    <textarea
+                      value={healthDetails[item.id] ?? ""}
+                      onChange={(event) =>
+                        setHealthDetails((prev) => ({
+                          ...prev,
+                          [item.id]: event.target.value,
+                        }))
+                      }
+                      placeholder={item.detailsLabel ?? t("detailsPlaceholder")}
+                      className="mt-2 min-h-20 w-full rounded-xl border border-mauve/25 bg-blush/20 px-3 py-2 text-sm focus:border-mauve focus:outline-none"
+                    />
+                  ) : null}
+                </div>
+              ))}
+
+              <p className="pt-3 text-sm font-medium text-ink/80">
+                {selectedServiceForm?.consentTitle ?? t("consentSection")}
+              </p>
+              {selectedServiceForm?.consentOptions.map((item) => (
                 <label
-                  key={item}
+                  key={item.id}
                   className="flex cursor-pointer items-center gap-2 rounded-xl border border-mauve/25 bg-white p-3 text-sm transition hover:border-mauve"
                 >
                   <input
                     type="checkbox"
-                    checked={healthItems.includes(item)}
+                    checked={healthItems.includes(item.id)}
                     className="accent-burgundy"
                     onChange={(event) => {
-                      if (event.target.checked) {
-                        if (item === "none") {
-                          setHealthItems(["none"]);
-                        } else {
-                          setHealthItems((prev) => [
-                            ...prev.filter((value) => value !== "none"),
-                            item,
-                          ]);
-                        }
-                      } else {
-                        setHealthItems((prev) =>
-                          prev.filter((value) => value !== item),
-                        );
-                      }
+                      setHealthItems((prev) => {
+                        const nonConsent = prev.filter((value) => !consentOptionIds.has(value));
+                        const currentConsent = prev.filter((value) => consentOptionIds.has(value));
+                        const nextConsent = event.target.checked
+                          ? [...currentConsent, item.id]
+                          : currentConsent.filter((value) => value !== item.id);
+                        return [...nonConsent, ...new Set(nextConsent)];
+                      });
                       if (stepError) setStepError("");
                     }}
                   />
-                  {t(`healthOptions.${item}`)}
+                  {item.label}
                 </label>
               ))}
             </div>
@@ -501,6 +681,27 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
               <div className="rounded-xl border border-mauve/20 bg-white p-3 text-xs leading-relaxed whitespace-pre-line">
                 {t("policiesText")}
               </div>
+              <div className="rounded-xl border border-mauve/25 bg-white p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="font-semibold">{t("signatureTitle")}</p>
+                  <button
+                    type="button"
+                    onClick={clearSignature}
+                    className="rounded-full border border-mauve/30 px-3 py-1 text-xs hover:bg-mauve/5"
+                  >
+                    {t("clearSignature")}
+                  </button>
+                </div>
+                <p className="mb-2 text-xs text-ink/70">{t("signatureHint")}</p>
+                <canvas
+                  ref={signatureCanvasRef}
+                  className="h-40 w-full touch-none rounded-lg border border-dashed border-mauve/40 bg-white"
+                  onPointerDown={startSignature}
+                  onPointerMove={drawSignature}
+                  onPointerUp={finishSignature}
+                  onPointerLeave={finishSignature}
+                />
+              </div>
               <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-mauve/25 bg-white p-3">
                 <input
                   type="checkbox"
@@ -514,6 +715,15 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
                 />
                 <span>{t("policiesConfirm")}</span>
               </label>
+              {signatureError ? (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700 shadow-sm"
+                >
+                  {signatureError}
+                </motion.p>
+              ) : null}
               {submitAttempted && stepError ? (
                 <motion.p
                   initial={{ opacity: 0, y: -4 }}
@@ -563,7 +773,7 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
             className="inline-flex items-center gap-1 rounded-full bg-burgundy px-5 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-mauve"
           >
             {t("next")}
-            <ChevronRight className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" />
           </button>
         ) : (
           <button
