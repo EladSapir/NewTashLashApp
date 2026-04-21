@@ -52,8 +52,15 @@ const stepVariants = {
  */
 const TOTAL_STEPS = 4;
 
+const ISRAEL_DAY_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Jerusalem",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 function startsAtDay(iso: string) {
-  return iso.slice(0, 10);
+  return ISRAEL_DAY_FORMATTER.format(new Date(iso));
 }
 
 /**
@@ -552,7 +559,11 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
                             <Clock3 className="h-4 w-4" />
                             {new Date(slot.startsAt).toLocaleTimeString(
                               "he-IL",
-                              { hour: "2-digit", minute: "2-digit" },
+                              {
+                                timeZone: "Asia/Jerusalem",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
                             )}
                           </button>
                         );
@@ -725,7 +736,9 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
                 ) : null}
                 {selectedSlot ? (
                   <p className="font-semibold text-burgundy">
-                    {new Date(selectedSlot.startsAt).toLocaleString("he-IL")}
+                    {new Date(selectedSlot.startsAt).toLocaleString("he-IL", {
+                      timeZone: "Asia/Jerusalem",
+                    })}
                   </p>
                 ) : null}
               </div>

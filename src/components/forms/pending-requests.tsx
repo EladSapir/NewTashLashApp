@@ -26,7 +26,11 @@ export function PendingRequests() {
             <p className="font-medium">{booking.fullName}</p>
             <p>{booking.phoneNumber}</p>
             <p>{t(booking.serviceId)}</p>
-            <p>{new Date(booking.startsAt).toLocaleString()}</p>
+            <p>
+              {new Date(booking.startsAt).toLocaleString("he-IL", {
+                timeZone: "Asia/Jerusalem",
+              })}
+            </p>
           </div>
         ))}
       </div>

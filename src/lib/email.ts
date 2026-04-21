@@ -64,7 +64,9 @@ export async function sendBookingEmail(
     .filter((id) => consentMap.has(id))
     .map((id) => `אושר: ${escapeHtml(consentMap.get(id)!.label)}`);
 
-  const formattedDate = new Date(booking.startsAt).toLocaleString("he-IL");
+  const formattedDate = new Date(booking.startsAt).toLocaleString("he-IL", {
+    timeZone: "Asia/Jerusalem",
+  });
   const signatureMatch = meta?.signatureDataUrl?.match(
     /^data:(image\/png);base64,([A-Za-z0-9+/=]+)$/,
   );

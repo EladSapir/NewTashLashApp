@@ -21,9 +21,15 @@ export function SlotManager() {
   }, []);
 
   const grouped = useMemo(() => {
+    const dayFormatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jerusalem",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
     const map = new Map<string, Slot[]>();
     for (const slot of slots) {
-      const day = slot.startsAt.slice(0, 10);
+      const day = dayFormatter.format(new Date(slot.startsAt));
       if (!map.has(day)) map.set(day, []);
       map.get(day)!.push(slot);
     }
@@ -120,7 +126,8 @@ export function SlotManager() {
             {grouped.map(([day, items]) => (
               <div key={day}>
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-mauve">
-                  {new Date(`${day}T00:00:00`).toLocaleDateString("he-IL", {
+                  {new Date(`${day}T12:00:00Z`).toLocaleDateString("he-IL", {
+                    timeZone: "Asia/Jerusalem",
                     weekday: "long",
                     day: "numeric",
                     month: "long",
@@ -134,6 +141,7 @@ export function SlotManager() {
                     >
                       <span>
                         {new Date(slot.startsAt).toLocaleTimeString("he-IL", {
+                          timeZone: "Asia/Jerusalem",
                           hour: "2-digit",
                           minute: "2-digit",
                         })}

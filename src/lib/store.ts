@@ -1,6 +1,7 @@
 import { BookingRequest, ServiceType, Slot } from "./types";
 import { prisma } from "./prisma";
 import { SERVICES, SLOT_INTERVAL_MINUTES } from "./constants";
+import { parseIsraelLocalDateTime } from "./timezone";
 
 function addMinutes(date: Date, minutes: number) {
   return new Date(date.getTime() + minutes * 60000);
@@ -58,8 +59,8 @@ function mapBooking(booking: {
 }
 
 export async function openRange(startAt: string, endAt: string) {
-  const startDate = new Date(startAt);
-  const endDate = new Date(endAt);
+  const startDate = parseIsraelLocalDateTime(startAt);
+  const endDate = parseIsraelLocalDateTime(endAt);
 
   if (!(startDate < endDate)) {
     throw new Error("טווח השעות אינו תקין");
