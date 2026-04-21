@@ -21,8 +21,20 @@ const config: Config = {
         card: "1.5rem",
       },
       fontFamily: {
-        display: ["'Playfair Display'", "serif"],
-        body: ["'Heebo'", "sans-serif"],
+        display: [
+          "'Frank Ruhl Libre'",
+          "'Rubik'",
+          "Georgia",
+          "serif",
+        ],
+        body: [
+          "'Rubik'",
+          "'Segoe UI'",
+          "system-ui",
+          "'Noto Sans Hebrew'",
+          "'Arial Hebrew'",
+          "sans-serif",
+        ],
       },
       backgroundImage: {
         "rose-sheen":

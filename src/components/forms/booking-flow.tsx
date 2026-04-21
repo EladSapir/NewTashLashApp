@@ -35,6 +35,17 @@ type Props = {
   initialServiceId?: ServiceId;
 };
 
+type ExistingBookingSummary = {
+  id: string;
+  serviceId: string;
+  startsAt: string;
+};
+
+type QuotaError = {
+  reason: "duplicate_service_booking" | "max_future_bookings_reached";
+  existingBookings: ExistingBookingSummary[];
+};
+
 const WHATSAPP_URL = "http://wa.me/972526043268";
 
 const stepVariants = {
@@ -128,6 +139,7 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
    */
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [signatureError, setSignatureError] = useState("");
+  const [quotaError, setQuotaError] = useState<QuotaError | null>(null);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const signatureInitializedRef = useRef(false);
   const drawingRef = useRef(false);
@@ -148,6 +160,7 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
     setStepError("");
     setSubmitAttempted(false);
     setSignatureError("");
+    setQuotaError(null);
     window.scrollTo({ top: 0, behavior: "auto" });
     if (step !== 4) {
       signatureInitializedRef.current = false;
@@ -205,10 +218,13 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
   }, [initSignatureCanvas]);
 
   const availableDates = useMemo(() => {
+    // Clients may only pick dates strictly after "today" in Israel.
+    const todayIsr = ISRAEL_DAY_FORMATTER.format(new Date());
     const unique = new Set(
       slots
         .filter((s) => s.status === "available")
-        .map((slot) => startsAtDay(slot.startsAt)),
+        .map((slot) => startsAtDay(slot.startsAt))
+        .filter((day) => day > todayIsr),
     );
     return [...unique].sort((a, b) => a.localeCompare(b));
   }, [slots]);
@@ -391,6 +407,7 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
 
     setStatus("loading");
     setStepError("");
+    setQuotaError(null);
     const response = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -410,12 +427,30 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
     });
 
     if (!response.ok) {
-      let serverError = "";
+      let payload:
+        | {
+            error?: string;
+            reason?: QuotaError["reason"];
+            existingBookings?: ExistingBookingSummary[];
+          }
+        | undefined;
       try {
-        const payload = (await response.json()) as { error?: string };
-        serverError = payload.error ?? "";
+        payload = (await response.json()) as typeof payload;
       } catch {
-        serverError = "";
+        payload = undefined;
+      }
+      const serverError = payload?.error ?? "";
+
+      if (
+        payload?.reason === "duplicate_service_booking" ||
+        payload?.reason === "max_future_bookings_reached"
+      ) {
+        setQuotaError({
+          reason: payload.reason,
+          existingBookings: payload.existingBookings ?? [],
+        });
+        setStatus("idle");
+        return;
       }
 
       if (
@@ -491,6 +526,11 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
                 <MonthlyCalendar
                   availableDates={availableDates}
                   selectedDate={selectedDate}
+                  minDate={(() => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    return tomorrow;
+                  })()}
                   onSelect={(date) => {
                     setSelectedDate(date);
                     setSlotId("");
@@ -801,6 +841,43 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
                 <p className="rounded-xl bg-green-100 p-3 text-green-800">
                   {t("success")}
                 </p>
+              ) : null}
+              {quotaError ? (
+                <div
+                  role="alert"
+                  className="space-y-3 rounded-xl border-2 border-red-300 bg-red-50 p-4 text-red-800"
+                >
+                  <p className="font-bold">
+                    {quotaError.reason === "duplicate_service_booking"
+                      ? t("quotaDuplicate")
+                      : t("quotaMax")}
+                  </p>
+                  {quotaError.existingBookings.length > 0 ? (
+                    <div className="rounded-lg border border-red-200 bg-white/70 p-3 text-sm text-ink">
+                      <p className="mb-1 font-semibold">{t("existingBookings")}</p>
+                      <ul className="space-y-1">
+                        {quotaError.existingBookings.map((existing) => (
+                          <li key={existing.id}>
+                            • {services(existing.serviceId)} ·{" "}
+                            {new Date(existing.startsAt).toLocaleString("he-IL", {
+                              timeZone: "Asia/Jerusalem",
+                            })}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <p className="text-sm">{t("quotaWhatsappHint")}</p>
+                  <a
+                    href={WHATSAPP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-soft transition hover:bg-emerald-700"
+                  >
+                    <MessageCircle className="h-4 w-4" aria-hidden />
+                    {common("whatsappCta")}
+                  </a>
+                </div>
               ) : null}
               {status === "error" ? (
                 <div className="space-y-2 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-red-700">

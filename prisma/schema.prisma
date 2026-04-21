@@ -19,6 +19,7 @@ enum SlotStatus {
 
 enum BookingStatus {
   pending
+  confirmed
 }
 
 model Slot {

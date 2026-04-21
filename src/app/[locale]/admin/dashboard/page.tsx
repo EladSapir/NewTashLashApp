@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { SlotManager } from "@/components/forms/slot-manager";
+import { BookingsManager } from "@/components/forms/bookings-manager";
 import { requireAdminSession } from "@/lib/auth";
 
 export default async function AdminDashboardPage({
@@ -18,6 +19,7 @@ export default async function AdminDashboardPage({
         <p className="text-sm opacity-80">פתיחת טווחים, ניהול סלוטים ואישור בקשות.</p>
       </div>
       <SlotManager />
+      <BookingsManager />
     </div>
   );
 }

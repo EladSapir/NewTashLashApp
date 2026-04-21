@@ -15,6 +15,8 @@ export type Slot = {
 
 export type HealthItemId = string;
 
+export type BookingStatus = "pending" | "confirmed";
+
 export type BookingRequest = {
   id: string;
   slotId: string;
@@ -26,7 +28,7 @@ export type BookingRequest = {
   serviceId: ServiceType;
   startsAt: string;
   healthItems: HealthItemId[];
-  status: "pending";
+  status: BookingStatus;
   createdAt: string;
 };
 

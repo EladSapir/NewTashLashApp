@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html suppressHydrationWarning>
+    <html lang="he" dir="rtl" suppressHydrationWarning>
       <body className="min-h-screen">{children}</body>
     </html>
   );
