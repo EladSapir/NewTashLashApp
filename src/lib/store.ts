@@ -133,7 +133,7 @@ export async function createPendingBooking(
     });
 
     if (!selectedSlot || selectedSlot.status !== "available") {
-      throw new Error("Selected slot is not available");
+      throw new Error("השעה שנבחרה כבר לא זמינה");
     }
 
     const duration = service.durationMinutes;
@@ -152,12 +152,17 @@ export async function createPendingBooking(
       throw new Error("הטווח הנדרש לטיפול כבר לא זמין, בחרי שעה אחרת");
     }
 
-    await tx.slot.updateMany({
+    const lockResult = await tx.slot.updateMany({
       where: {
         id: { in: relevantSlots.map((slot) => slot.id) },
+        status: "available",
       },
       data: { status: "pending" },
     });
+
+    if (lockResult.count !== units) {
+      throw new Error("הטווח הנדרש לטיפול כבר נתפס, בחרי שעה אחרת");
+    }
 
     return tx.booking.create({
       data: {

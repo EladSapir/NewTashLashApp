@@ -1,6 +1,14 @@
 "use client";
 
-import { FormEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  PointerEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Clock3, MessageCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -114,6 +122,7 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [signatureError, setSignatureError] = useState("");
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const signatureInitializedRef = useRef(false);
   const drawingRef = useRef(false);
   const signatureHasStrokeRef = useRef(false);
 
@@ -132,6 +141,10 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
     setStepError("");
     setSubmitAttempted(false);
     setSignatureError("");
+    window.scrollTo({ top: 0, behavior: "auto" });
+    if (step !== 4) {
+      signatureInitializedRef.current = false;
+    }
   }, [step]);
 
   useEffect(() => {
@@ -139,33 +152,50 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
     setHealthDetails({});
   }, [serviceId]);
 
+  const initSignatureCanvas = useCallback((canvas: HTMLCanvasElement) => {
+    const ratio = window.devicePixelRatio || 1;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (width === 0 || height === 0) return;
+
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    canvas.width = Math.floor(width * ratio);
+    canvas.height = Math.floor(height * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.lineWidth = 2;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.strokeStyle = "#3a2d34";
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    signatureInitializedRef.current = true;
+  }, []);
+
+  const handleSignatureRef = useCallback(
+    (node: HTMLCanvasElement | null) => {
+      signatureCanvasRef.current = node;
+      if (!node) {
+        signatureInitializedRef.current = false;
+        return;
+      }
+      requestAnimationFrame(() => initSignatureCanvas(node));
+    },
+    [initSignatureCanvas],
+  );
+
   useEffect(() => {
-    const canvas = signatureCanvasRef.current;
-    if (!canvas) return;
-
-    const resizeCanvas = () => {
-      const ratio = window.devicePixelRatio || 1;
-      const width = canvas.clientWidth;
-      const height = canvas.clientHeight;
-      const context = canvas.getContext("2d");
-      if (!context || width === 0 || height === 0) return;
-
-      context.setTransform(1, 0, 0, 1, 0, 0);
-      canvas.width = Math.floor(width * ratio);
-      canvas.height = Math.floor(height * ratio);
-      context.scale(ratio, ratio);
-      context.lineWidth = 2;
-      context.lineCap = "round";
-      context.lineJoin = "round";
-      context.strokeStyle = "#3a2d34";
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, width, height);
+    const handleResize = () => {
+      const canvas = signatureCanvasRef.current;
+      if (!canvas) return;
+      initSignatureCanvas(canvas);
+      signatureHasStrokeRef.current = false;
+      setSignatureDataUrl("");
     };
-
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
-    return () => window.removeEventListener("resize", resizeCanvas);
-  }, [step]);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [initSignatureCanvas]);
 
   const availableDates = useMemo(() => {
     const unique = new Set(
@@ -211,13 +241,15 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
   const startSignature = (event: PointerEvent<HTMLCanvasElement>) => {
     const canvas = signatureCanvasRef.current;
     if (!canvas) return;
+    if (!signatureInitializedRef.current) {
+      initSignatureCanvas(canvas);
+    }
     const context = canvas.getContext("2d");
     if (!context) return;
 
     drawingRef.current = true;
     signatureHasStrokeRef.current = true;
     setSignatureError("");
-    canvas.setPointerCapture(event.pointerId);
     const { x, y } = getCanvasPoint(event, canvas);
     context.beginPath();
     context.moveTo(x, y);
@@ -371,6 +403,25 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
     });
 
     if (!response.ok) {
+      let serverError = "";
+      try {
+        const payload = (await response.json()) as { error?: string };
+        serverError = payload.error ?? "";
+      } catch {
+        serverError = "";
+      }
+
+      if (
+        serverError.includes("not available") ||
+        serverError.includes("לא זמין") ||
+        serverError.includes("נתפס")
+      ) {
+        setStep(1);
+        setSlotId("");
+        setStepError("השעה שבחרת כבר לא פנויה. בחרי שעה אחרת.");
+        setStatus("idle");
+        return;
+      }
       setStatus("error");
       return;
     }
@@ -694,7 +745,7 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
                 </div>
                 <p className="mb-2 text-xs text-ink/70">{t("signatureHint")}</p>
                 <canvas
-                  ref={signatureCanvasRef}
+                  ref={handleSignatureRef}
                   className="h-40 w-full touch-none rounded-lg border border-dashed border-mauve/40 bg-white"
                   onPointerDown={startSignature}
                   onPointerMove={drawSignature}

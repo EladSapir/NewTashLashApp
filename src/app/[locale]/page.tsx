@@ -5,6 +5,7 @@ import { ArrowLeft, MessageCircle, Sparkles } from "lucide-react";
 import { SuccessPopup } from "@/components/ui/success-popup";
 import { InstagramIcon } from "@/components/ui/icons";
 import { SERVICE_IDS } from "@/lib/constants";
+import natushImage from "../../../natush.png";
 
 export default async function HomePage({
   searchParams,
@@ -30,7 +31,7 @@ export default async function HomePage({
           <div className="relative mx-auto w-72 shrink-0 md:w-96">
             <div className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-rose/60 via-mauve/40 to-burgundy/40 blur-3xl" />
             <Image
-              src="/tash-hero.jpeg"
+              src={natushImage}
               alt={common("brand")}
               width={900}
               height={1050}

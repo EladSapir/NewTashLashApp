@@ -65,11 +65,25 @@ export async function sendBookingEmail(
     .map((id) => `אושר: ${escapeHtml(consentMap.get(id)!.label)}`);
 
   const formattedDate = new Date(booking.startsAt).toLocaleString("he-IL");
+  const signatureMatch = meta?.signatureDataUrl?.match(
+    /^data:(image\/png);base64,([A-Za-z0-9+/=]+)$/,
+  );
+  const signatureCid = "client-signature";
 
   await resend.emails.send({
     from: "Tash Lashes <onboarding@resend.dev>",
     to,
     subject: `בקשת תור חדשה - ${booking.fullName}`,
+    attachments: signatureMatch
+      ? [
+          {
+            filename: "signature.png",
+            content: signatureMatch[2],
+            contentType: signatureMatch[1],
+            contentId: signatureCid,
+          },
+        ]
+      : undefined,
     html: `
       <div dir="rtl" style="font-family:Arial,sans-serif;background:#fff7fb;padding:24px;color:#3a2d34">
         <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #f4d7e3;border-radius:18px;overflow:hidden">
@@ -96,10 +110,10 @@ export async function sendBookingEmail(
             ${buildList(consentItems)}
             <p><strong>אישור נהלים:</strong> אושר</p>
             ${
-              meta?.signatureDataUrl
+              signatureMatch
                 ? `<hr style="border:none;border-top:1px solid #f1e1e8;margin:16px 0;" />
                    <h3 style="margin:0 0 10px 0;">חתימת לקוחה</h3>
-                   <img src="${meta.signatureDataUrl}" alt="חתימת לקוחה" style="display:block;max-width:100%;height:auto;border:1px solid #f0d4df;border-radius:12px;background:#fff;" />`
+                   <img src="cid:${signatureCid}" alt="חתימת לקוחה" style="display:block;max-width:100%;height:auto;border:1px solid #f0d4df;border-radius:12px;background:#fff;" />`
                 : ""
             }
             <div style="margin-top:20px;">

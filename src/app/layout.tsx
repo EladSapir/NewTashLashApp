@@ -2,8 +2,25 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tash Lashes & Eyebrows",
-  description: "Professional mobile-first booking app",
+  title: "Tash Lashes - קביעת תורים",
+  description: "Tash Lashes - קביעת תורים",
+  icons: {
+    icon: "/icon?v=2",
+    shortcut: "/icon?v=2",
+    apple: "/icon?v=2",
+  },
+  openGraph: {
+    title: "Tash Lashes - קביעת תורים",
+    description: "Tash Lashes - קביעת תורים",
+    images: ["/opengraph-image"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tash Lashes - קביעת תורים",
+    description: "Tash Lashes - קביעת תורים",
+    images: ["/opengraph-image"],
+  },
 };
 
 export const viewport: Viewport = {
