@@ -48,12 +48,30 @@ export default function OpenGraphImage() {
           >
             TL
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              alignItems: "flex-start",
+            }}
+          >
             <div style={{ fontSize: 68, fontWeight: 700, color: "#7e3e48" }}>
               Tash Lashes
             </div>
-            <div style={{ fontSize: 42, color: "#3a2d34" }}>
-              קביעת תורים
+            <div
+              lang="he"
+              dir="rtl"
+              style={{
+                fontSize: 42,
+                color: "#3a2d34",
+                direction: "rtl",
+                unicodeBidi: "bidi-override",
+                textAlign: "right",
+                display: "flex",
+              }}
+            >
+              {"\u202Bקביעת תורים\u202C"}
             </div>
           </div>
         </div>
