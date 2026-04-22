@@ -782,7 +782,7 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
                   </p>
                 ) : null}
               </div>
-              <div className="rounded-xl border border-mauve/20 bg-white p-3 text-xs leading-relaxed whitespace-pre-line">
+              <div className="rounded-xl border border-mauve/20 bg-white p-3 text-sm leading-relaxed whitespace-pre-line">
                 {t("policiesText")}
               </div>
               <div className="rounded-xl border border-mauve/25 bg-white p-3">

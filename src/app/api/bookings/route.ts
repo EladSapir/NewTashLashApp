@@ -104,6 +104,7 @@ export async function POST(request: Request) {
     await sendBookingEmail(booking, {
       healthDetails: body.healthDetails,
       signatureDataUrl: body.signatureDataUrl,
+      submittedPhoneNumber: body.phoneNumber,
     });
     return NextResponse.json({ booking }, { status: 201 });
   } catch (error) {

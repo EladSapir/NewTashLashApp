@@ -11,6 +11,29 @@ const serviceLabels: Record<string, string> = {
   lashLiftBrowShape: "הרמת ריסים + עיצוב גבות",
 };
 
+/**
+ * Normalize a phone number to the `wa.me` digit-only international format.
+ * Handles the common Israeli input shapes:
+ *   - "050-123-4567"   -> "972501234567"     (strip leading 0, prefix 972)
+ *   - "0501234567"     -> "972501234567"
+ *   - "+972501234567"  -> "972501234567"
+ *   - "972501234567"   -> "972501234567"
+ * Returns an empty string if nothing usable was provided.
+ */
+function toWhatsappDigits(phone: string): string {
+  const raw = (phone ?? "").trim();
+  if (!raw) return "";
+
+  const hasPlus = raw.startsWith("+");
+  const digits = raw.replace(/\D/g, "");
+  if (!digits || /^0+$/.test(digits)) return "";
+
+  if (hasPlus) return digits;
+  if (digits.startsWith("972")) return digits;
+  if (digits.startsWith("0")) return `972${digits.slice(1)}`;
+  return digits;
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -43,8 +66,31 @@ export async function sendBookingEmail(
   const resend = new Resend(apiKey);
   const service = (SERVICES as Record<string, { id: string; durationMinutes: number }>)[booking.serviceId];
   if (!service) return;
-  const adminPhone = process.env.ADMIN_PHONE_NUMBER ?? "";
-  const whatsappLink = `https://wa.me/${adminPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi Natasha, I'd like to confirm my appointment request.\nName: ${booking.fullName}\nPhone: ${booking.phoneNumber}`)}`;
+  const clientPhone =
+    (meta?.submittedPhoneNumber ?? booking.phoneNumber).trim() || booking.phoneNumber;
+  const clientWaDigits = toWhatsappDigits(clientPhone);
+  const serviceLabel = serviceLabels[service.id] ?? service.id;
+  const appointmentDate = new Date(booking.startsAt);
+  const waTimeParts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jerusalem",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(appointmentDate);
+  const waDateParts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jerusalem",
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  }).formatToParts(appointmentDate);
+  const getPart = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  const waTime = `${getPart(waTimeParts, "hour")}:${getPart(waTimeParts, "minute")}`;
+  const waDate = `${getPart(waDateParts, "day")}.${getPart(waDateParts, "month")}.${getPart(waDateParts, "year")}`;
+  const whatsappMessage = `היי ❤️\nקיבלתי את בקשת התור שלך\nטיפול ${serviceLabel} בשעה ${waTime} בתאריך ${waDate}\nהתור מאושר, נפגש!`;
+  const whatsappLink = clientWaDigits
+    ? `https://wa.me/${clientWaDigits}?text=${encodeURIComponent(whatsappMessage)}`
+    : "";
 
   const form = SERVICE_HEALTH_FORMS[booking.serviceId as keyof typeof SERVICE_HEALTH_FORMS];
   const medicalMap = new Map((form?.medicalOptions ?? []).map((item) => [item.id, item]));
@@ -96,12 +142,12 @@ export async function sendBookingEmail(
           <div style="padding:18px 22px;">
             <h3 style="margin:0 0 10px 0;">פרטי לקוחה</h3>
             <p><strong>שם מלא:</strong> ${booking.fullName}</p>
-            <p><strong>טלפון:</strong> ${booking.phoneNumber}</p>
+            <p><strong>טלפון:</strong> ${escapeHtml(clientPhone)}</p>
             <p><strong>גיל:</strong> ${booking.age}</p>
             <p><strong>תעודת זהות:</strong> ${booking.idNumber}</p>
             <hr style="border:none;border-top:1px solid #f1e1e8;margin:16px 0;" />
             <h3 style="margin:0 0 10px 0;">פרטי טיפול</h3>
-            <p><strong>שירות:</strong> ${serviceLabels[service.id] ?? service.id}</p>
+            <p><strong>שירות:</strong> ${serviceLabel}</p>
             <p><strong>משך טיפול:</strong> ${service.durationMinutes} דקות</p>
             <p><strong>תאריך ושעה:</strong> ${formattedDate}</p>
             <hr style="border:none;border-top:1px solid #f1e1e8;margin:16px 0;" />
@@ -118,9 +164,13 @@ export async function sendBookingEmail(
                    <img src="cid:${signatureCid}" alt="חתימת לקוחה" style="display:block;max-width:100%;height:auto;border:1px solid #f0d4df;border-radius:12px;background:#fff;" />`
                 : ""
             }
-            <div style="margin-top:20px;">
-              <a href="${whatsappLink}" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:700;">פתיחת וואטסאפ לאישור תור</a>
-            </div>
+            ${
+              whatsappLink
+                ? `<div style="margin-top:20px;">
+              <a href="${whatsappLink}" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:700;">פתיחת וואטסאפ ללקוחה</a>
+            </div>`
+                : ""
+            }
           </div>
         </div>
       </div>

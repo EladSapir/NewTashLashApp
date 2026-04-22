@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   CalendarX,
@@ -26,7 +26,7 @@ export function BookingsManager() {
   const [releasingId, setReleasingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
-  const loadBookings = async () => {
+  const loadBookings = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/bookings", { cache: "no-store" });
       const data = (await response.json()) as {
@@ -42,11 +42,11 @@ export function BookingsManager() {
     } catch {
       setError(t("loadError"));
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     void loadBookings();
-  }, []);
+  }, [loadBookings]);
 
   const grouped = useMemo(() => {
     if (!bookings) return [];

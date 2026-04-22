@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 
@@ -11,6 +12,11 @@ type Props = {
 
 export function SuccessPopup({ message, visible }: Props) {
   const [open, setOpen] = useState(visible);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setOpen(visible);
@@ -19,14 +25,19 @@ export function SuccessPopup({ message, visible }: Props) {
     return () => clearTimeout(timeout);
   }, [visible]);
 
-  return (
+  if (!mounted) {
+    return null;
+  }
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-40 flex items-center justify-center bg-burgundy/30 px-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex min-h-0 items-center justify-center bg-burgundy/30 px-4 py-4 backdrop-blur-sm"
+          style={{ top: 0, left: 0, right: 0, bottom: 0, height: "100dvh" }}
           onClick={() => setOpen(false)}
         >
           <motion.div
@@ -44,6 +55,7 @@ export function SuccessPopup({ message, visible }: Props) {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

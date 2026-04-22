@@ -35,4 +35,6 @@ export type BookingRequest = {
 export type BookingSubmissionMeta = {
   healthDetails?: Record<string, string>;
   signatureDataUrl?: string;
+  /** Client phone as submitted; used in notification so it always matches the form. */
+  submittedPhoneNumber?: string;
 };

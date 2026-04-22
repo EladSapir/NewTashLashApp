@@ -7,6 +7,8 @@ export const size = {
 
 export const contentType = "image/png";
 
+export const dynamic = "force-dynamic";
+
 // Satori (the engine behind next/og) does not perform bidi reordering,
 // so Hebrew text is rendered in logical order (appears reversed visually).
 // We manually reverse each word and the word order so that when the text
