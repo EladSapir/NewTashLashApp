@@ -87,7 +87,17 @@ export async function sendBookingEmail(
     parts.find((p) => p.type === type)?.value ?? "";
   const waTime = `${getPart(waTimeParts, "hour")}:${getPart(waTimeParts, "minute")}`;
   const waDate = `${getPart(waDateParts, "day")}.${getPart(waDateParts, "month")}.${getPart(waDateParts, "year")}`;
-  const whatsappMessage = `היי ❤️\nקיבלתי את בקשת התור שלך\nטיפול ${serviceLabel} בשעה ${waTime} בתאריך ${waDate}\nהתור מאושר, נפגש!`;
+  // wa.me prefills: colored emoji and many Unicode heart glyphs become "?" or U+FFFD in WhatsApp
+  // when the link passes through email clients. "<3" is plain ASCII and always renders.
+  // RLE+PDF: force RTL block; LTR marks around "<3" and around digits.
+  const LTR = "\u200E";
+  const RLE = "\u202B";
+  const PDF = "\u202C";
+  const textHeart = "<3";
+  const whatsappMessage = `${RLE}היי ${LTR}${textHeart}
+קיבלתי את בקשת התור שלך
+טיפול ${serviceLabel} בשעה ${LTR}${waTime} בתאריך ${LTR}${waDate}
+התור מאושר, נפגש!${PDF}`;
   const whatsappLink = clientWaDigits
     ? `https://wa.me/${clientWaDigits}?text=${encodeURIComponent(whatsappMessage)}`
     : "";
