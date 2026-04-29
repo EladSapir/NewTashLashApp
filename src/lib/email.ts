@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import { BookingRequest, BookingSubmissionMeta } from "./types";
-import { SERVICE_HEALTH_FORMS, SERVICES } from "./constants";
+import { LOCATION_CITY_HE, SERVICE_HEALTH_FORMS, SERVICES } from "./constants";
 
 const serviceLabels: Record<string, string> = {
   lashLift: "הרמת ריסים",
@@ -123,6 +123,7 @@ export async function sendBookingEmail(
   const formattedDate = new Date(booking.startsAt).toLocaleString("he-IL", {
     timeZone: "Asia/Jerusalem",
   });
+  const cityLabel = LOCATION_CITY_HE[booking.location];
   const signatureMatch = meta?.signatureDataUrl?.match(
     /^data:(image\/png);base64,([A-Za-z0-9+/=]+)$/,
   );
@@ -131,7 +132,9 @@ export async function sendBookingEmail(
   await resend.emails.send({
     from: "Tash Lashes <onboarding@resend.dev>",
     to,
-    subject: `בקשת תור חדשה - ${booking.fullName}`,
+    // Subject prefix is the city only — per Natasha's request — so it's
+    // immediately obvious which studio the booking is for.
+    subject: `${cityLabel} - בקשת תור חדשה - ${booking.fullName}`,
     attachments: signatureMatch
       ? [
           {
@@ -157,6 +160,7 @@ export async function sendBookingEmail(
             <p><strong>תעודת זהות:</strong> ${booking.idNumber}</p>
             <hr style="border:none;border-top:1px solid #f1e1e8;margin:16px 0;" />
             <h3 style="margin:0 0 10px 0;">פרטי טיפול</h3>
+            <p><strong>סטודיו:</strong> ${cityLabel}</p>
             <p><strong>שירות:</strong> ${serviceLabel}</p>
             <p><strong>משך טיפול:</strong> ${service.durationMinutes} דקות</p>
             <p><strong>תאריך ושעה:</strong> ${formattedDate}</p>

@@ -4,7 +4,7 @@ import {
   listFutureBookingsForIdNumber,
 } from "@/lib/store";
 import { sendBookingEmail } from "@/lib/email";
-import { SERVICE_HEALTH_FORMS } from "@/lib/constants";
+import { isValidLocation, SERVICE_HEALTH_FORMS } from "@/lib/constants";
 import { BookingRequest, BookingSubmissionMeta } from "@/lib/types";
 import {
   isValidAge,
@@ -31,6 +31,9 @@ export async function POST(request: Request) {
     if (!isValidIdNumber(body.idNumber)) {
       throw new Error("Invalid ID number");
     }
+    if (!isValidLocation(body.location)) {
+      throw new Error("Invalid location");
+    }
     const healthForm = SERVICE_HEALTH_FORMS[body.serviceId as keyof typeof SERVICE_HEALTH_FORMS];
     if (!healthForm) {
       throw new Error("Invalid service");
@@ -52,6 +55,9 @@ export async function POST(request: Request) {
     // Enforce per-client booking quota (based on ID number) BEFORE
     // locking any slot / creating a row. Only bookings that haven't
     // already started/passed are counted.
+    // The quota is GLOBAL across studios — a client cannot have two
+    // future bookings for the same service even if they're in different
+    // studios, and is capped at 2 future bookings total.
     const normalizedIdNumber = body.idNumber.replace(/\D/g, "");
     const existingFutureBookings = await listFutureBookingsForIdNumber(
       normalizedIdNumber,
@@ -63,6 +69,7 @@ export async function POST(request: Request) {
       id: existing.id,
       serviceId: existing.serviceId,
       startsAt: existing.startsAt,
+      location: existing.location,
     }));
     const sameServiceBooking = existingFutureBookings.find(
       (existing) => existing.serviceId === body.serviceId,
@@ -97,6 +104,7 @@ export async function POST(request: Request) {
       policiesAccepted: body.policiesAccepted,
       serviceId: body.serviceId,
       startsAt: body.startsAt,
+      location: body.location,
       healthItems: body.healthItems,
     };
 

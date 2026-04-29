@@ -18,8 +18,16 @@ export default async function AdminDashboardPage({
         <h1 className="font-display text-2xl font-bold">ניהול תורים</h1>
         <p className="text-sm opacity-80">פתיחת טווחים, ניהול סלוטים ואישור בקשות.</p>
       </div>
-      <SlotManager />
-      <BookingsManager />
+      {/*
+        SlotManager renders three sections: open-range form, then its
+        children (the bookings list), then active slots. This keeps the
+        slot state (load + refresh after a successful range opening)
+        owned by SlotManager while still letting the dashboard place
+        BookingsManager between the form and the active-slots list.
+      */}
+      <SlotManager>
+        <BookingsManager />
+      </SlotManager>
     </div>
   );
 }

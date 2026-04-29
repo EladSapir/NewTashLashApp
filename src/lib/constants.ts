@@ -1,4 +1,24 @@
-import { HealthItemId, Service } from "./types";
+import { HealthItemId, Location, Service } from "./types";
+
+/* ==========================================================================
+ * STUDIO LOCATIONS
+ * --------------------------------------------------------------------------
+ * The business has two studios; every slot and every booking belongs to
+ * exactly one of them. Keep `LOCATION_IDS` in sync with the `Location`
+ * enum in `prisma/schema.prisma` and with the `Location` TS type in
+ * `lib/types.ts`.
+ * ========================================================================== */
+
+export const LOCATION_IDS = ["ashdod", "tel_aviv"] as const satisfies readonly Location[];
+
+export const LOCATION_CITY_HE: Record<Location, string> = {
+  ashdod: "אשדוד",
+  tel_aviv: "תל אביב",
+};
+
+export function isValidLocation(value: unknown): value is Location {
+  return value === "ashdod" || value === "tel_aviv";
+}
 
 /* ==========================================================================
  * TREATMENTS LIST
@@ -20,7 +40,7 @@ export const SERVICES = {
   },
   browLiftFull: {
     id: "browLiftFull",
-    durationMinutes: 90,
+    durationMinutes: 60,
   },
   lashBrowLift: {
     id: "lashBrowLift",
@@ -45,6 +65,33 @@ export type ServiceId = keyof typeof SERVICES;
 export const SERVICE_IDS: ServiceId[] = Object.keys(SERVICES) as ServiceId[];
 
 export const SLOT_INTERVAL_MINUTES = 30;
+
+/* ==========================================================================
+ * SERVICE PRICES (in NIS / שקלים)
+ * --------------------------------------------------------------------------
+ * Prices differ per studio. Shown to the customer ONLY on the booking
+ * page service-selection grid (step 1). Edit values here to update the
+ * prices presented to clients.
+ * ========================================================================== */
+
+export const SERVICE_PRICES: Record<Location, Record<ServiceId, number>> = {
+  ashdod: {
+    lashLift: 250,
+    browLiftFull: 250,
+    lashBrowLift: 450,
+    browShape: 70,
+    browMustache: 80,
+    lashLiftBrowShape: 310,
+  },
+  tel_aviv: {
+    lashLift: 300,
+    browLiftFull: 300,
+    lashBrowLift: 550,
+    browShape: 90,
+    browMustache: 100,
+    lashLiftBrowShape: 380,
+  },
+};
 
 export const HEALTH_NONE_ID = "none";
 

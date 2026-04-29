@@ -1,4 +1,4 @@
-import { BookingRequest, ServiceType, Slot } from "./types";
+import { BookingRequest, Location, ServiceType, Slot } from "./types";
 import { prisma } from "./prisma";
 import { SERVICES, SLOT_INTERVAL_MINUTES } from "./constants";
 import { parseIsraelLocalDateTime } from "./timezone";
@@ -20,11 +20,13 @@ function mapSlot(slot: {
   id: string;
   startsAt: Date;
   status: "available" | "pending" | "confirmed";
+  location: Location;
 }): Slot {
   return {
     id: slot.id,
     startsAt: slot.startsAt.toISOString(),
     status: slot.status,
+    location: slot.location,
   };
 }
 
@@ -38,6 +40,7 @@ function mapBooking(booking: {
   policiesAccepted: boolean;
   serviceId: string;
   startsAt: Date;
+  location: Location;
   healthItems: string[];
   status: "pending" | "confirmed";
   createdAt: Date;
@@ -52,13 +55,24 @@ function mapBooking(booking: {
     policiesAccepted: booking.policiesAccepted,
     serviceId: booking.serviceId,
     startsAt: booking.startsAt.toISOString(),
+    location: booking.location,
     healthItems: booking.healthItems as BookingRequest["healthItems"],
     status: booking.status,
     createdAt: booking.createdAt.toISOString(),
   };
 }
 
-export async function openRange(startAt: string, endAt: string) {
+/**
+ * Opens an inclusive `[startAt, endAt)` time range as available slots
+ * for the given studio. Slots already existing in any state at the same
+ * `(startsAt, location)` pair are left untouched, so two studios may
+ * share the same wall-clock time independently.
+ */
+export async function openRange(
+  startAt: string,
+  endAt: string,
+  location: Location,
+) {
   const startDate = parseIsraelLocalDateTime(startAt);
   const endDate = parseIsraelLocalDateTime(endAt);
 
@@ -77,6 +91,7 @@ export async function openRange(startAt: string, endAt: string) {
 
   const existing = await prisma.slot.findMany({
     where: {
+      location,
       startsAt: { in: timestamps },
     },
     select: { startsAt: true },
@@ -88,6 +103,7 @@ export async function openRange(startAt: string, endAt: string) {
     .map((timestamp) => ({
       startsAt: timestamp,
       status: "available" as const,
+      location,
     }));
 
   if (rows.length === 0) return 0;
@@ -121,18 +137,26 @@ function startOfTomorrowIsrael(now = new Date()): Date {
   return parseIsraelLocalDateTime(`${y}-${m}-${d}T00:00`);
 }
 
-export async function listAvailableSlots() {
+/**
+ * Lists currently-available slots. Optionally restricted to a single
+ * studio location (used by the public booking page); admins call it
+ * without a location to see slots across both studios.
+ */
+export async function listAvailableSlots(location?: Location) {
   const slots = await prisma.slot.findMany({
     where: {
       status: "available",
       startsAt: { gte: startOfTomorrowIsrael() },
+      ...(location ? { location } : {}),
     },
     orderBy: { startsAt: "asc" },
   });
 
-  const deduped = new Map<number, Slot>();
+  // Slots are deduped per (startsAt, location) pair so that two
+  // studios sharing the same wall-clock time are kept separate.
+  const deduped = new Map<string, Slot>();
   for (const slot of slots) {
-    const key = slot.startsAt.getTime();
+    const key = `${slot.location}|${slot.startsAt.getTime()}`;
     if (!deduped.has(key)) deduped.set(key, mapSlot(slot));
   }
 
@@ -150,6 +174,8 @@ export async function listPendingBookings() {
 /**
  * Returns every booking whose `startsAt` is still in the future (any status).
  * Used by the admin dashboard to power the "release an appointment" flow.
+ * Cross-studio: the admin sees both studios in one list with a per-row
+ * `location` field that the UI uses to render a Tel-Aviv badge.
  */
 export async function listFutureBookings() {
   const bookings = await prisma.booking.findMany({
@@ -162,6 +188,8 @@ export async function listFutureBookings() {
 /**
  * Returns every future booking tied to the given Israeli ID number.
  * Only considers bookings whose `startsAt` hasn't passed yet.
+ * Cross-studio: the per-client quota is enforced globally across both
+ * studios, so this query does NOT filter by location.
  */
 export async function listFutureBookingsForIdNumber(idNumber: string) {
   const normalized = idNumber.replace(/\D/g, "");
@@ -179,6 +207,8 @@ export async function listFutureBookingsForIdNumber(idNumber: string) {
 /**
  * Marks a pending booking as confirmed and locks every slot it occupies
  * to `confirmed` too, so the admin has a clear "approved" state.
+ * Slot updates are scoped to the booking's own studio so we never touch
+ * a same-time slot belonging to the other studio.
  */
 export async function confirmBooking(bookingId: string) {
   return prisma.$transaction(async (tx) => {
@@ -203,6 +233,7 @@ export async function confirmBooking(bookingId: string) {
 
     await tx.slot.updateMany({
       where: {
+        location: booking.location,
         startsAt: { gte: booking.startsAt, lt: endAt },
         status: "pending",
       },
@@ -214,7 +245,7 @@ export async function confirmBooking(bookingId: string) {
 /**
  * Cancels a booking made by a client and releases every slot that was
  * locked for that treatment back to `available`, so the time becomes
- * bookable again for someone else.
+ * bookable again for someone else. Scoped to the booking's own studio.
  */
 export async function cancelBookingAndReleaseSlots(bookingId: string) {
   return prisma.$transaction(async (tx) => {
@@ -233,6 +264,7 @@ export async function cancelBookingAndReleaseSlots(bookingId: string) {
 
     await tx.slot.updateMany({
       where: {
+        location: booking.location,
         startsAt: { gte: booking.startsAt, lt: endAt },
         status: { in: ["pending", "confirmed"] },
       },
@@ -260,6 +292,11 @@ export async function createPendingBooking(
       throw new Error("השעה שנבחרה כבר לא זמינה");
     }
 
+    // The chosen slot must belong to the studio the client picked.
+    if (selectedSlot.location !== payload.location) {
+      throw new Error("השעה שנבחרה אינה שייכת לסטודיו שנבחר");
+    }
+
     if (selectedSlot.startsAt < startOfTomorrowIsrael()) {
       throw new Error("ניתן לקבוע תורים רק החל ממחר");
     }
@@ -270,6 +307,7 @@ export async function createPendingBooking(
 
     const relevantSlots = await tx.slot.findMany({
       where: {
+        location: payload.location,
         startsAt: { gte: selectedSlot.startsAt, lt: endAt },
         status: "available",
       },
@@ -302,6 +340,7 @@ export async function createPendingBooking(
         policiesAccepted: payload.policiesAccepted,
         serviceId: payload.serviceId,
         startsAt: selectedSlot.startsAt,
+        location: payload.location,
         healthItems: payload.healthItems,
         status: "pending",
       },
@@ -330,6 +369,7 @@ export async function deleteAvailableSlot(slotId: string) {
  * deleted while a Booking still references it.
  *
  * Idempotent: safe to run on any schedule and/or manually.
+ * Cross-studio: cleanup runs across both studios together.
  */
 export async function cleanupPastAppointments(now = new Date()) {
   const deletedBookings = await prisma.booking.deleteMany({
@@ -345,12 +385,17 @@ export async function cleanupPastAppointments(now = new Date()) {
 }
 
 /** Export the unused-legacy openSlot in case it's imported elsewhere. */
-export async function openSlot(_serviceId: ServiceType, startsAt: string) {
+export async function openSlot(
+  _serviceId: ServiceType,
+  startsAt: string,
+  location: Location,
+) {
   const startsAtDate = new Date(startsAt);
   const slot = await prisma.slot.create({
     data: {
       startsAt: startsAtDate,
       status: "available",
+      location,
     },
   });
   return mapSlot(slot);

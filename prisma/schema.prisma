@@ -22,15 +22,21 @@ enum BookingStatus {
   confirmed
 }
 
+enum Location {
+  ashdod
+  tel_aviv
+}
+
 model Slot {
   id        String     @id @default(cuid())
   startsAt  DateTime
   status    SlotStatus @default(available)
+  location  Location   @default(ashdod)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   booking   Booking?
 
-  @@index([status, startsAt])
+  @@index([location, status, startsAt])
 }
 
 model Booking {
@@ -43,6 +49,7 @@ model Booking {
   policiesAccepted Boolean
   serviceId        String
   startsAt         DateTime
+  location         Location      @default(ashdod)
   healthItems      String[]
   status           BookingStatus @default(pending)
   createdAt        DateTime      @default(now())
@@ -50,4 +57,5 @@ model Booking {
   slot Slot @relation(fields: [slotId], references: [id], onDelete: Restrict)
 
   @@index([status, createdAt])
+  @@index([location, startsAt])
 }

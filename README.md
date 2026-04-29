@@ -37,16 +37,30 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). App redirects to `/he`.
 
+## Studio Locations
+
+The business operates two studios — `ashdod` and `tel_aviv` — that share
+one Postgres database. Every `Slot` and `Booking` row carries a
+`location` enum column so each studio has independent availability,
+admin views, and email subjects, while the per-client booking quota
+(max 2 future bookings, no duplicate same-service) is enforced
+**globally** across both studios.
+
+The customer always picks the studio first via the studio-picker popup
+on the home page; the choice flows through to the booking page as
+`?location=ashdod` or `?location=tel_aviv` and is persisted on the
+resulting booking row.
+
 ## Main Flows
 
-- Client booking flow (4 steps): service/time -> details -> health declaration -> submit
+- Client studio picker -> booking flow (4 steps): service/time -> details -> health declaration -> submit
 - Slot becomes `pending` immediately after booking submission
-- Notification email is sent with booking details + health summary + WhatsApp link
+- Notification email is sent (subject prefixed with the studio's city name) with booking details + health summary + WhatsApp link
 - Booking and slot state are stored in PostgreSQL for persistence
 - Admin:
   - Login
-  - Open slots by service type
-  - View pending requests
+  - Open slots by studio (one form per studio)
+  - View pending + confirmed requests across both studios with a Tel-Aviv badge
 
 ## Deployment
 

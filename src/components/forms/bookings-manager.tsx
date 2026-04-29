@@ -11,6 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { BookingRequest } from "@/lib/types";
+import { LocationBadge } from "@/components/forms/slot-manager";
 
 /**
  * Admin-only panel listing every future (upcoming) booking together
@@ -170,17 +171,22 @@ export function BookingsManager() {
               <ul className="grid gap-2">
                 {items.map((booking) => {
                   const isPending = booking.status === "pending";
+                  const isTelAviv = booking.location === "tel_aviv";
                   return (
                     <li
                       key={booking.id}
                       className={`flex flex-col gap-2 rounded-xl border p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${
-                        isPending
-                          ? "border-amber-300 bg-amber-50"
-                          : "border-emerald-300 bg-emerald-50"
+                        isTelAviv
+                          ? isPending
+                            ? "border-mauve/60 bg-gradient-to-l from-mauve/10 to-amber-50 ring-2 ring-mauve/30"
+                            : "border-mauve/60 bg-gradient-to-l from-mauve/10 to-emerald-50 ring-2 ring-mauve/30"
+                          : isPending
+                            ? "border-amber-300 bg-amber-50"
+                            : "border-emerald-300 bg-emerald-50"
                       }`}
                     >
                       <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                               isPending
@@ -195,6 +201,7 @@ export function BookingsManager() {
                             )}
                             {isPending ? t("statusPending") : t("statusConfirmed")}
                           </span>
+                          <LocationBadge location={booking.location} />
                           <p className="font-semibold text-ink">
                             {new Date(booking.startsAt).toLocaleTimeString("he-IL", {
                               timeZone: "Asia/Jerusalem",

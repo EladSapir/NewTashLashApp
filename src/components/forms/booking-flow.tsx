@@ -15,13 +15,15 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   HEALTH_NONE_ID,
+  LOCATION_CITY_HE,
   SERVICE_HEALTH_FORMS,
+  SERVICE_PRICES,
   SERVICES,
   SERVICE_IDS,
   SLOT_INTERVAL_MINUTES,
   ServiceId,
 } from "@/lib/constants";
-import { HealthItemId, Slot } from "@/lib/types";
+import { HealthItemId, Location, Slot } from "@/lib/types";
 import {
   isValidAge,
   isValidHealthSelection,
@@ -33,6 +35,7 @@ import { MonthlyCalendar } from "@/components/ui/monthly-calendar";
 type Props = {
   slots: Slot[];
   initialServiceId?: ServiceId;
+  location: Location;
 };
 
 type ExistingBookingSummary = {
@@ -107,11 +110,12 @@ function buildRunLengths(daySlots: Slot[]) {
   return runLengths;
 }
 
-export function BookingFlow({ slots, initialServiceId }: Props) {
+export function BookingFlow({ slots, initialServiceId, location }: Props) {
   const router = useRouter();
   const t = useTranslations("booking");
   const services = useTranslations("services");
   const common = useTranslations("common");
+  const cityLabel = LOCATION_CITY_HE[location];
 
   const [step, setStep] = useState(1);
   const [slotId, setSlotId] = useState("");
@@ -420,6 +424,7 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
         policiesAccepted,
         serviceId,
         startsAt: selectedSlot.startsAt,
+        location,
         healthItems,
         healthDetails,
         signatureDataUrl,
@@ -490,6 +495,17 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
           </span>
         </div>
         <p className="text-sm text-ink/70">{t("subtitle")}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-sm ${
+              location === "tel_aviv"
+                ? "border border-mauve/40 bg-gradient-to-l from-mauve/10 to-rose/10 text-burgundy"
+                : "border border-mauve/30 bg-blush/40 text-burgundy"
+            }`}
+          >
+            {t("studioBadge", { city: cityLabel })}
+          </span>
+        </div>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-mauve/10">
           <motion.div
             className="h-full rounded-full bg-gradient-to-r from-rose to-burgundy"
@@ -540,13 +556,15 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
               </div>
 
               {/* 1b. SERVICE (after date) — skipped when the service was
-                  pre-selected from the home page */}
+                  pre-selected from the home page. Each option also
+                  shows the studio-specific price. */}
               {selectedDate && !initialServiceId && (
                 <div>
                   <p className="mb-2 font-semibold">{t("selectService")}</p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {SERVICE_IDS.map((id) => {
                       const active = serviceId === id;
+                      const price = SERVICE_PRICES[location][id];
                       return (
                         <button
                           key={id}
@@ -556,13 +574,22 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
                             setSlotId("");
                             if (stepError) setStepError("");
                           }}
-                          className={`rounded-xl border px-3 py-3 text-right text-sm font-semibold transition ${
+                          className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-3 text-right text-sm font-semibold transition ${
                             active
                               ? "border-burgundy bg-burgundy text-white shadow-soft"
                               : "border-mauve/25 bg-white hover:border-mauve"
                           }`}
                         >
-                          {services(id)}
+                          <span>{services(id)}</span>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                              active
+                                ? "bg-white/20 text-white"
+                                : "bg-blush/60 text-burgundy"
+                            }`}
+                          >
+                            ₪{price}
+                          </span>
                         </button>
                       );
                     })}
@@ -771,6 +798,9 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
                 <p>
                   {t("idNumber")}: {idNumber}
                 </p>
+                <p className="font-semibold text-burgundy">
+                  {t("studioBadge", { city: cityLabel })}
+                </p>
                 {serviceId ? (
                   <p className="font-semibold">{services(serviceId)}</p>
                 ) : null}
@@ -806,6 +836,14 @@ export function BookingFlow({ slots, initialServiceId }: Props) {
                   onPointerLeave={finishSignature}
                 />
               </div>
+              {location === "tel_aviv" ? (
+                <div className="rounded-xl border-2 border-mauve/40 bg-gradient-to-l from-rose/15 to-blush/30 p-3 text-sm leading-relaxed text-ink shadow-sm">
+                  <p className="mb-1 font-display text-base font-bold text-burgundy">
+                    {t("telAvivDepositTitle")}
+                  </p>
+                  <p className="whitespace-pre-line">{t("telAvivDepositText")}</p>
+                </div>
+              ) : null}
               <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-mauve/25 bg-white p-3">
                 <input
                   type="checkbox"

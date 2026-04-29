@@ -1,8 +1,8 @@
 import Image from "next/image";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { ArrowLeft, MessageCircle, Sparkles } from "lucide-react";
 import { SuccessPopup } from "@/components/ui/success-popup";
+import { BookingCta } from "@/components/ui/booking-cta";
 import { InstagramIcon } from "@/components/ui/icons";
 import { SERVICE_IDS } from "@/lib/constants";
 import natushImage from "../../../natush.png";
@@ -53,13 +53,14 @@ export default async function HomePage({
             </p>
 
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3 md:justify-start">
-              <Link
-                href="/he/booking"
+              <BookingCta
+                to="/he/booking"
                 className="inline-flex items-center gap-2 rounded-full bg-burgundy px-6 py-3 text-sm font-bold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-mauve"
+                ariaLabel={common("bookNow")}
               >
                 <Sparkles className="h-4 w-4" />
                 {common("bookNow")}
-              </Link>
+              </BookingCta>
               <a
                 href="http://wa.me/972526043268"
                 target="_blank"
@@ -94,10 +95,11 @@ export default async function HomePage({
 
         <div className="grid gap-3 sm:grid-cols-2">
           {SERVICE_IDS.map((key) => (
-            <Link
+            <BookingCta
               key={key}
-              href={`/he/booking?service=${key}`}
-              className="group relative overflow-hidden rounded-card border border-mauve/15 bg-white/85 p-5 shadow-soft backdrop-blur transition hover:-translate-y-0.5 hover:border-mauve/40"
+              to={`/he/booking?service=${key}`}
+              ariaLabel={services(key)}
+              className="group relative w-full overflow-hidden rounded-card border border-mauve/15 bg-white/85 p-5 text-right shadow-soft backdrop-blur transition hover:-translate-y-0.5 hover:border-mauve/40"
             >
               <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br from-rose/30 to-mauve/10 transition group-hover:scale-110" />
               <div className="relative flex items-center justify-between gap-3">
@@ -106,7 +108,7 @@ export default async function HomePage({
                 </h3>
                 <ArrowLeft className="h-4 w-4 shrink-0 text-mauve transition group-hover:-translate-x-1" />
               </div>
-            </Link>
+            </BookingCta>
           ))}
         </div>
       </section>
