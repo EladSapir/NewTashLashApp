@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { ArrowLeft, MessageCircle, Sparkles } from "lucide-react";
+import { MessageCircle, Sparkles } from "lucide-react";
 import { SuccessPopup } from "@/components/ui/success-popup";
 import { BookingCta } from "@/components/ui/booking-cta";
 import { InstagramIcon } from "@/components/ui/icons";
@@ -97,14 +97,13 @@ export default async function HomePage({
           {SERVICE_IDS.map((key) => (
             <div
               key={key}
-              className="group relative w-full overflow-hidden rounded-card border border-mauve/15 bg-white/85 p-5 text-right shadow-soft backdrop-blur transition hover:-translate-y-0.5 hover:border-mauve/40"
+              className="relative w-full overflow-hidden rounded-card border border-mauve/15 bg-white/85 p-5 text-right shadow-soft backdrop-blur"
             >
-              <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br from-rose/30 to-mauve/10 transition group-hover:scale-110" />
+              <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br from-rose/30 to-mauve/10" />
               <div className="relative flex items-center justify-between gap-3">
                 <h3 className="font-display text-lg font-semibold text-ink">
                   {services(key)}
                 </h3>
-                <ArrowLeft className="h-4 w-4 shrink-0 text-mauve transition group-hover:-translate-x-1" />
               </div>
             </div>
           ))}
