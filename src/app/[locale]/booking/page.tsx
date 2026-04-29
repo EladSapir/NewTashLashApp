@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 import { BookingFlow } from "@/components/forms/booking-flow";
 import { listAvailableSlots } from "@/lib/store";
-import { isValidLocation, SERVICES, ServiceId } from "@/lib/constants";
+import { isValidLocation } from "@/lib/constants";
 
 export default async function BookingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ service?: string; location?: string }>;
+  searchParams: Promise<{ location?: string }>;
 }) {
-  const { service, location } = await searchParams;
+  const { location } = await searchParams;
 
   // The booking page is always entered through the location-picker
   // popup on the home page, so a `location` query param is mandatory.
@@ -20,16 +20,12 @@ export default async function BookingPage({
 
   const slots = await listAvailableSlots(location);
 
-  const initialServiceId: ServiceId | undefined =
-    service && service in SERVICES ? (service as ServiceId) : undefined;
-
+  // Treatment type is always picked inside the calendar step — we no
+  // longer pre-select it from the home page, so `initialServiceId`
+  // intentionally stays unset.
   return (
     <div className="mx-auto w-full max-w-3xl px-4">
-      <BookingFlow
-        slots={slots}
-        initialServiceId={initialServiceId}
-        location={location}
-      />
+      <BookingFlow slots={slots} location={location} />
     </div>
   );
 }

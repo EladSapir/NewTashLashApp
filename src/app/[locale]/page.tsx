@@ -74,9 +74,9 @@ export default async function HomePage({
                 href="https://www.instagram.com/tash.lashes1"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-mauve/40 bg-white/80 px-5 py-3 text-sm font-bold text-ink backdrop-blur transition hover:-translate-y-0.5 hover:bg-white"
+                className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-mauve/40 bg-white/80 px-5 py-3 text-sm font-bold text-ink backdrop-blur transition hover:-translate-y-0.5 hover:bg-white"
               >
-                <InstagramIcon className="h-4 w-4" />
+                <InstagramIcon className="h-4 w-4 shrink-0" />
                 Instagram
               </a>
             </div>
@@ -95,10 +95,8 @@ export default async function HomePage({
 
         <div className="grid gap-3 sm:grid-cols-2">
           {SERVICE_IDS.map((key) => (
-            <BookingCta
+            <div
               key={key}
-              to={`/he/booking?service=${key}`}
-              ariaLabel={services(key)}
               className="group relative w-full overflow-hidden rounded-card border border-mauve/15 bg-white/85 p-5 text-right shadow-soft backdrop-blur transition hover:-translate-y-0.5 hover:border-mauve/40"
             >
               <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br from-rose/30 to-mauve/10 transition group-hover:scale-110" />
@@ -108,7 +106,7 @@ export default async function HomePage({
                 </h3>
                 <ArrowLeft className="h-4 w-4 shrink-0 text-mauve transition group-hover:-translate-x-1" />
               </div>
-            </BookingCta>
+            </div>
           ))}
         </div>
       </section>
