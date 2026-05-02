@@ -133,22 +133,29 @@ export function SlotManager({ children }: { children?: ReactNode }) {
               })}
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm">
+          {/*
+            min-w-0 is critical here: by default grid/flex items have
+            min-width:auto, so a native <input type="datetime-local">
+            (whose intrinsic width fits "dd/mm/yyyy --:--" + padding)
+            blows out the card on narrow phone screens. min-w-0 on the
+            label AND the input lets them shrink to the available width.
+          */}
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+            <label className="block min-w-0 text-sm">
               <span className="mb-1 block text-xs font-medium text-ink/60">התחלה</span>
               <input
                 type="datetime-local"
-                className="w-full rounded-xl border border-mauve/25 bg-white px-3 py-3 focus:border-mauve focus:outline-none"
+                className="block w-full min-w-0 max-w-full rounded-xl border border-mauve/25 bg-white px-3 py-3 focus:border-mauve focus:outline-none"
                 value={startAt}
                 onChange={(e) => setStartAt(e.target.value)}
                 required
               />
             </label>
-            <label className="block text-sm">
+            <label className="block min-w-0 text-sm">
               <span className="mb-1 block text-xs font-medium text-ink/60">סיום</span>
               <input
                 type="datetime-local"
-                className="w-full rounded-xl border border-mauve/25 bg-white px-3 py-3 focus:border-mauve focus:outline-none"
+                className="block w-full min-w-0 max-w-full rounded-xl border border-mauve/25 bg-white px-3 py-3 focus:border-mauve focus:outline-none"
                 value={endAt}
                 onChange={(e) => setEndAt(e.target.value)}
                 required

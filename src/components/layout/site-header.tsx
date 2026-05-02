@@ -18,12 +18,12 @@ export function SiteHeader() {
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
         <Link
           href="/he"
-          className="flex items-center gap-2 transition hover:opacity-80"
+          className="flex shrink-0 items-center gap-2 transition hover:opacity-80"
         >
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-rose to-mauve text-white shadow-soft">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-rose to-mauve text-white shadow-soft">
             <Sparkles className="h-4 w-4" />
           </span>
-          <span className="font-display text-sm font-semibold text-burgundy">
+          <span className="whitespace-nowrap font-display text-sm font-semibold text-burgundy">
             {t("brand")}
           </span>
         </Link>
