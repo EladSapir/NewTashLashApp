@@ -93,13 +93,11 @@ export function LocationPickerPopup({ open, onClose, onSelect }: Props) {
             <div className="grid gap-3 p-5 sm:grid-cols-2">
               <StudioButton
                 city="אשדוד"
-                subtitle="כנרת 71, אשדוד"
                 gradient="from-rose to-burgundy"
                 onClick={() => onSelect("ashdod")}
               />
               <StudioButton
                 city="תל אביב"
-                subtitle="שינקין 56 (קוסמוס), תל אביב"
                 gradient="from-mauve to-ink"
                 onClick={() => onSelect("tel_aviv")}
               />
@@ -114,12 +112,10 @@ export function LocationPickerPopup({ open, onClose, onSelect }: Props) {
 
 function StudioButton({
   city,
-  subtitle,
   gradient,
   onClick,
 }: {
   city: string;
-  subtitle: string;
   gradient: string;
   onClick: () => void;
 }) {
@@ -127,16 +123,13 @@ function StudioButton({
     <button
       type="button"
       onClick={onClick}
-      className={`group relative flex h-32 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} px-4 text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-md`}
+      className={`group relative flex h-32 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} px-4 text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-md`}
     >
       <span className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/15 transition group-hover:scale-110" />
       <span className="relative grid h-9 w-9 place-items-center rounded-full bg-white/20">
         <MapPin className="h-5 w-5" />
       </span>
       <span className="relative font-display text-xl font-bold">{city}</span>
-      <span className="relative text-[11px] font-medium text-white/85">
-        {subtitle}
-      </span>
     </button>
   );
 }

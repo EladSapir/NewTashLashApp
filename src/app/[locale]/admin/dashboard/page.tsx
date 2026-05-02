@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { SlotManager } from "@/components/forms/slot-manager";
 import { BookingsManager } from "@/components/forms/bookings-manager";
+import { WeeklyCalendar } from "@/components/forms/weekly-calendar";
 import { requireAdminSession } from "@/lib/auth";
 
 export default async function AdminDashboardPage({
@@ -20,13 +21,15 @@ export default async function AdminDashboardPage({
       </div>
       {/*
         SlotManager renders three sections: open-range form, then its
-        children (the bookings list), then active slots. This keeps the
-        slot state (load + refresh after a successful range opening)
-        owned by SlotManager while still letting the dashboard place
-        BookingsManager between the form and the active-slots list.
+        children (the bookings-by-day list + weekly calendar), then the
+        active slots list. This keeps the slot state (load + refresh
+        after a successful range opening) owned by SlotManager while
+        still letting the dashboard place the bookings views between
+        the form and the active-slots list.
       */}
       <SlotManager>
         <BookingsManager />
+        <WeeklyCalendar />
       </SlotManager>
     </div>
   );

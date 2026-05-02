@@ -107,7 +107,15 @@
     "loading": "טוען תורים…",
     "noFutureBookings": "אין כרגע תורים עתידיים שנקבעו.",
     "refresh": "רענון",
-    "idNumberShort": "ת.ז"
+    "idNumberShort": "ת.ז",
+    "weeklyTitle": "לוח שבועי",
+    "week": "שבוע",
+    "thisWeek": "השבוע",
+    "today": "היום",
+    "prevWeek": "שבוע קודם",
+    "nextWeek": "שבוע הבא",
+    "noBookingsShort": "אין תורים",
+    "bookingsCount": "{count, plural, one {תור אחד} two {2 תורים} other {# תורים}}"
   },
   "accessibility": {
     "toggle": "פתיחת תפריט נגישות",

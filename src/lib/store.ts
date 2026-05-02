@@ -186,6 +186,20 @@ export async function listFutureBookings() {
 }
 
 /**
+ * Returns every booking whose `startsAt` is within `[from, to)` (any status).
+ * Used by the admin dashboard's weekly calendar so the admin can browse
+ * past and upcoming weeks. Cross-studio: both studios are returned and
+ * the UI renders a per-row badge.
+ */
+export async function listBookingsBetween(from: Date, to: Date) {
+  const bookings = await prisma.booking.findMany({
+    where: { startsAt: { gte: from, lt: to } },
+    orderBy: { startsAt: "asc" },
+  });
+  return bookings.map(mapBooking);
+}
+
+/**
  * Returns every future booking tied to the given Israeli ID number.
  * Only considers bookings whose `startsAt` hasn't passed yet.
  * Cross-studio: the per-client quota is enforced globally across both
