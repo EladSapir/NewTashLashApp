@@ -222,13 +222,17 @@ export function BookingFlow({ slots, initialServiceId, location }: Props) {
   }, [initSignatureCanvas]);
 
   const availableDates = useMemo(() => {
-    // Clients may only pick dates strictly after "today" in Israel.
+    // The server (`listAvailableSlots`) already filters out any slot
+    // that's within the booking lead-time threshold — including past
+    // and same-day-too-soon slots — so we just bucket the remainder by
+    // their Israel-local day. Today is allowed when it still has a
+    // future-enough slot (e.g. now=13:00 → 14:00 onwards).
     const todayIsr = ISRAEL_DAY_FORMATTER.format(new Date());
     const unique = new Set(
       slots
         .filter((s) => s.status === "available")
         .map((slot) => startsAtDay(slot.startsAt))
-        .filter((day) => day > todayIsr),
+        .filter((day) => day >= todayIsr),
     );
     return [...unique].sort((a, b) => a.localeCompare(b));
   }, [slots]);
@@ -542,11 +546,6 @@ export function BookingFlow({ slots, initialServiceId, location }: Props) {
                 <MonthlyCalendar
                   availableDates={availableDates}
                   selectedDate={selectedDate}
-                  minDate={(() => {
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    return tomorrow;
-                  })()}
                   onSelect={(date) => {
                     setSelectedDate(date);
                     setSlotId("");

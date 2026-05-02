@@ -66,6 +66,16 @@ export const SERVICE_IDS: ServiceId[] = Object.keys(SERVICES) as ServiceId[];
 
 export const SLOT_INTERVAL_MINUTES = 30;
 
+/**
+ * Minimum lead time (in minutes) between "now" and the start of a
+ * bookable slot. Customers cannot book a slot that starts sooner than
+ * this — e.g. with the value 60, at 13:00 the earliest bookable slot
+ * is the one starting at 14:00. The same threshold is used to decide
+ * which `available` slots are shown both to customers and in the
+ * admin's active-slots list.
+ */
+export const MIN_BOOKING_LEAD_TIME_MINUTES = 60;
+
 /* ==========================================================================
  * SERVICE PRICES (in NIS / שקלים)
  * --------------------------------------------------------------------------

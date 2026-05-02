@@ -1,6 +1,10 @@
 import { BookingRequest, Location, ServiceType, Slot } from "./types";
 import { prisma } from "./prisma";
-import { SERVICES, SLOT_INTERVAL_MINUTES } from "./constants";
+import {
+  MIN_BOOKING_LEAD_TIME_MINUTES,
+  SERVICES,
+  SLOT_INTERVAL_MINUTES,
+} from "./constants";
 import { parseIsraelLocalDateTime } from "./timezone";
 
 function addMinutes(date: Date, minutes: number) {
@@ -112,41 +116,27 @@ export async function openRange(
 }
 
 /**
- * Returns the UTC timestamp for the start of "tomorrow" in Israel local
- * time. Clients may only book for dates strictly after today in Israel.
+ * Returns the earliest UTC instant that may be booked. A slot is only
+ * bookable if it starts at or after `now + MIN_BOOKING_LEAD_TIME_MINUTES`,
+ * i.e. customers cannot book the past, the current moment, or any time
+ * less than the lead-time threshold from now.
  */
-function startOfTomorrowIsrael(now = new Date()): Date {
-  const dayFormatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jerusalem",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const parts = dayFormatter.formatToParts(now);
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((p) => p.type === type)?.value);
-  const year = get("year");
-  const month = get("month");
-  const day = get("day");
-  // The local-Israel wall-clock time "YYYY-MM-DDT00:00" of the NEXT day.
-  const pad = (value: number) => `${value}`.padStart(2, "0");
-  const nextDay = new Date(Date.UTC(year, month - 1, day + 1));
-  const y = nextDay.getUTCFullYear();
-  const m = pad(nextDay.getUTCMonth() + 1);
-  const d = pad(nextDay.getUTCDate());
-  return parseIsraelLocalDateTime(`${y}-${m}-${d}T00:00`);
+export function earliestBookableTime(now = new Date()): Date {
+  return new Date(now.getTime() + MIN_BOOKING_LEAD_TIME_MINUTES * 60_000);
 }
 
 /**
  * Lists currently-available slots. Optionally restricted to a single
  * studio location (used by the public booking page); admins call it
- * without a location to see slots across both studios.
+ * without a location to see slots across both studios. Slots whose
+ * start time is within the lead-time threshold (default: less than an
+ * hour away) are excluded — they're treated as no-longer-bookable.
  */
 export async function listAvailableSlots(location?: Location) {
   const slots = await prisma.slot.findMany({
     where: {
       status: "available",
-      startsAt: { gte: startOfTomorrowIsrael() },
+      startsAt: { gte: earliestBookableTime() },
       ...(location ? { location } : {}),
     },
     orderBy: { startsAt: "asc" },
@@ -311,8 +301,8 @@ export async function createPendingBooking(
       throw new Error("השעה שנבחרה אינה שייכת לסטודיו שנבחר");
     }
 
-    if (selectedSlot.startsAt < startOfTomorrowIsrael()) {
-      throw new Error("ניתן לקבוע תורים רק החל ממחר");
+    if (selectedSlot.startsAt < earliestBookableTime()) {
+      throw new Error("ניתן לקבוע תורים רק לפחות שעה מראש");
     }
 
     const duration = service.durationMinutes;
